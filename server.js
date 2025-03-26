@@ -7,13 +7,19 @@ require("dotenv").config();
 const app = express(); // ✅ Initialize app first
 const port = process.env.PORT || 4000;
 
-// ✅ Properly configure CORS
 app.use(cors({
-    origin: "https://ai-assist-bot.vercel.app/",
-    methods: "GET, POST",
-    allowedHeaders: "Content-Type, Authorization"
+    origin: "https://ai-assist-bot.vercel.app", // Remove trailing slash
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
-app.options("*", cors());
+
+// ✅ Handle Preflight Requests
+app.options("*", (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "https://ai-assist-bot.vercel.app");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.status(200).end();
+});
 
 app.use(express.json());
 

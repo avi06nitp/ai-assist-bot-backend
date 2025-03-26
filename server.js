@@ -39,6 +39,10 @@ const sources = ["https://www.investopedia.com/",'https://share.market/support/h
     }
 })();
 
+app.get("/", (req, res) => {
+    res.send("🚀 Server is up and running!");
+});
+
 app.post("/ask", async (req, res) => {
     const { question } = req.body;
 

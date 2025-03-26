@@ -13,12 +13,11 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// ✅ Handle Preflight Requests
 app.options("*", (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "https://ai-assist-bot.vercel.app");
+    res.setHeader("Access-Control-Allow-Origin", "*"); // 🔥 Change * to your frontend URL later
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.status(200).end();
+    res.status(204).end();
 });
 
 app.use(express.json());

@@ -4,19 +4,27 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { buildKnowledgeBase } = require("./knowledgeBase");
 require("dotenv").config();
 
-const app = express(); // ✅ Initialize app first
+const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(cors({
-    origin: "https://ai-assist-bot.vercel.app", // Remove trailing slash
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-}));
+// ✅ Explicit CORS Handling
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "https://ai-assist-bot.vercel.app"); // 🔥 Allow frontend origin
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-app.options("*", (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*"); // 🔥 Change * to your frontend URL later
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+        return res.status(204).end(); // Preflight request handling
+    }
+    
+    next();
+});
+
+// ✅ Handle Preflight Requests for /ask route
+app.options("/ask", (req, res) => {
+    res.header("Access-Control-Allow-Origin", "https://ai-assist-bot.vercel.app");
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.status(204).end();
 });
 
@@ -32,20 +40,21 @@ const sources = ["https://www.investopedia.com/",'https://share.market/support/h
 (async () => {
     try {
         knowledgeBase = await buildKnowledgeBase(sources);
-        console.log("Knowledge base built successfully");
+        console.log("✅ Knowledge base built successfully");
     } catch (error) {
-        console.error("Error building knowledge base:", error);
+        console.error("❌ Error building knowledge base:", error);
     }
 })();
 
-app.get("/", (req, res) => {
-    res.send("🚀 Server is up and running!");
-});
-
+// ✅ API Route for Asking Questions
 app.post("/ask", async (req, res) => {
+    // 🔥 Explicitly add CORS headers for every response
+    res.setHeader("Access-Control-Allow-Origin", "https://ai-assist-bot.vercel.app");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
     const { question } = req.body;
 
-    // Validate request body
     if (!question) {
         return res.status(400).json({ error: "Bad Request: 'question' field is required." });
     }
@@ -57,21 +66,18 @@ app.post("/ask", async (req, res) => {
             contents: [{ parts: [{ text: prompt }] }]
         });
 
-        console.log("Raw API Response:", JSON.stringify(result, null, 2));
+        const answer = result.response?.candidates?.[0]?.content?.parts?.map(part => part.text).join("\n") || "No response received.";
 
-        if (!result || !result.response || !result.response.candidates || result.response.candidates.length === 0) {
-            throw new Error("Invalid response from AI model");
-        }
-
-        const answer = result.response.candidates[0]?.content?.parts?.map(part => part.text).join("\n") || "No response received.";
-
-        console.log("Answer:", answer);
         res.json({ answer });
     } catch (error) {
-        console.error("Error processing request:", error);
+        console.error("❌ Error processing request:", error);
         res.status(500).json({ error: "Internal Server Error: Unable to process request." });
     }
 });
 
+app.get("/", (req, res) => {
+    res.send("🚀 Server is up and running!");
+});
 
-app.listen(port, () => console.log("Server running on port {port}"));
+app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
+

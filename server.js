@@ -1,15 +1,22 @@
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { extractTextFromUrl, extractTextFromPdf, buildKnowledgeBase } = require("./knowledgeBase");
-const port = process.env.PORT || 4000;
+const { buildKnowledgeBase } = require("./knowledgeBase");
 require("dotenv").config();
 
-const app = express();
-app.use(cors());
+const app = express(); // ✅ Initialize app first
+const port = process.env.PORT || 4000;
+
+// ✅ Properly configure CORS
+app.use(cors({
+    origin: "https://ai-assist-bot.vercel.app/",
+    methods: "GET, POST",
+    allowedHeaders: "Content-Type, Authorization"
+}));
+app.options("*", cors());
+
 app.use(express.json());
 
-// Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
@@ -43,12 +50,10 @@ app.post("/ask", async (req, res) => {
 
         console.log("Raw API Response:", JSON.stringify(result, null, 2));
 
-        // ✅ Corrected structure check
         if (!result || !result.response || !result.response.candidates || result.response.candidates.length === 0) {
             throw new Error("Invalid response from AI model");
         }
 
-        // ✅ Extracting response correctly
         const answer = result.response.candidates[0]?.content?.parts?.map(part => part.text).join("\n") || "No response received.";
 
         console.log("Answer:", answer);
